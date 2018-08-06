@@ -19,13 +19,14 @@ job = Job(
     'test job',
     start_date=datetime(2018, 8, 1),  # '2018-08-01',
     schedule='0 0 * * *',
+    # retries=4,
 )
 
 task_hello = Task(action=fn_hello)
 job.add_task(task_hello)
 
 
-task_exception = Task(action=fn_exception)
+task_exception = Task(action=fn_exception)  # , retries=1)
 job.add_task(task_exception)
 
 job.set_dependency(task_hello, task_exception)

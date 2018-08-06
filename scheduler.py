@@ -36,7 +36,7 @@ class CommandRunner(Thread):
         print(process.returncode)
 
 
-def schedule(path, payload=None):
+def run_command(path, payload=None):
 
     cmd = [
         'python',
@@ -58,7 +58,7 @@ if __name__ == '__main__':
     payload = {
         'action': 'register',
     }
-    schedule('test_job.py', payload)
+    run_command('test_job.py', payload)
 
     session = db.Session()
     try:
@@ -72,7 +72,7 @@ if __name__ == '__main__':
                     'job_run_id': next_job_run.job_run_id,
                 }
                 path = next_job_run.get_job(session).path
-                schedule(path, payload)
+                run_command(path, payload)
 
             # clear any jobs that are pending
             db.JobRun.clear_pending(session)
@@ -88,7 +88,7 @@ if __name__ == '__main__':
                     'task_run_id': next_task_run.task_run_id,
                 }
                 path = next_task_run.get_job(session).path
-                schedule(path, payload)
+                run_command(path, payload)
 
             # clear any tasks that are pending
             db.TaskRun.clear_pending(session)

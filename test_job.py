@@ -15,16 +15,17 @@ def fn_exception(context):
     raise Exception('Exception raised')
 
 
-j = Job(
+job = Job(
     'test job',
     start_date=datetime(2018, 8, 1),  # '2018-08-01',
     schedule='0 0 * * *',
 )
 
-t1 = Task(action=fn_hello)
-j.add_task(t1)
+task_hello = Task(action=fn_hello)
+job.add_task(task_hello)
 
 
-t2 = Task(action=fn_exception)
-j.set_dependency(t1, t2)
-j.add_task(t2)
+task_exception = Task(action=fn_exception)
+job.add_task(task_exception)
+
+job.set_dependency(task_hello, task_exception)

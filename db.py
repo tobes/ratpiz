@@ -67,15 +67,10 @@ class Job(Base):
         return JobRun.get_scheduled(session, job_id=self.job_id)
 
 
-class Task(Base):
-    __tablename__ = 'task'
-
-    task_id = Column(Integer, primary_key=True)
-    job_id = Column(Integer)
-    name = Column(String)
-
-
 class RunBase:
+    """
+    Mix-in class to add extra functionality to JobRun and TaskRun
+    """
 
     @classmethod
     def clear_pending(cls, session):

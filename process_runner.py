@@ -25,20 +25,6 @@ parser.add_argument(
     help='json payload'
 )
 
-parser.add_argument(
-    '--register',
-    dest='register',
-    action='store_true',
-    help='register job'
-)
-
-parser.add_argument(
-    '--run',
-    dest='run',
-    action='store_true',
-    help='run job'
-)
-
 
 def import_path(path):
     """
@@ -70,6 +56,8 @@ def jobs_from_path(path, job_name=None):
 
 if __name__ == '__main__':
 
+    # We have been called let us do what needs to be done.
+
     args = parser.parse_args()
     print(args)
 
@@ -78,7 +66,7 @@ if __name__ == '__main__':
     else:
         payload = {}
 
-    if args.register:
+    if payload.get('action') == 'register':
         jobs = jobs_from_path(args.execution_path)
         print('@@@@ job')
         for job in jobs:
@@ -87,7 +75,7 @@ if __name__ == '__main__':
             job.register(session)
             session.close()
 
-    if args.run:
+    if payload.get('action') == 'run':
         session = db.Session()
         job_run_id = payload.get('job_run_id')
         if job_run_id:

@@ -25,7 +25,8 @@ PENDING_TIMEOUT = timedelta(seconds=1)
 PENDING = 'pending'
 WAITING = 'waiting'
 RETRY = 'retry'
-
+SUCCESS = 'success'
+FAIL = 'fail'
 
 class Job(Base):
     __tablename__ = 'job'
@@ -173,7 +174,7 @@ class RunBase:
     def get_job(self, session):
         return Job.get_by_id(session, self.job_id)
 
-    def complete(self, session, state='success'):
+    def complete(self, session, state=SUCCESS):
         if state == RETRY:
             raise
         self.completed = True

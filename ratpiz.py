@@ -129,9 +129,11 @@ class Task:
         exception = None
         try:
             result = self._action(context)
-            state = 'success'
+            state = db.SUCCESS
         except Fail as e:
-            state = 'fail'
+            state = db.FAIL
+        except Retry as e:
+            state = db.RETRY
         except Exception as e:  # should this be BaseException?
             exception = e
             state = db.RETRY
@@ -146,7 +148,7 @@ class Task:
             max_retries = self.from_kwargs('retries')
             if task_run.retries >= max_retries:
                 print('maximum number of retries')
-                state = 'fail'
+                state = db.FAIL
 
         # What's going on? update the task run
         if state == db.RETRY:

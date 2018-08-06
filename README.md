@@ -2,12 +2,12 @@
 
 A scheduler with the following aims:
 
-* simple
-
 * reliable
 
-* fast
+* simple
 
 * easy to use
+
+* fast
 
 (c) @tobes 2018

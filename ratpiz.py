@@ -10,6 +10,11 @@ import db
 ZERO = timedelta(0)
 UNIX_EPOC = datetime(1970, 1, 1)
 
+DEFAULT_KWARGS = {
+    'retries': 1,
+    'retry_delay': 5,
+}
+
 
 def to_unix_time(datetime_):
     # python 3.3+ return datetime_.timestamp()
@@ -130,8 +135,8 @@ class Task:
             print(str(exception))
 
         # if retrying should we now fail?
-            max_retries = self.from_kwargs('max_retries', 2)
         if state == db.RETRY:
+            max_retries = self.from_kwargs('retries')
             if task_run.retries >= max_retries:
                 print('maximum number of retries')
                 state = 'fail'
@@ -139,7 +144,7 @@ class Task:
         # What's going on? update the task run
         if state == db.RETRY:
             # we want to retry
-            retry_delay = self.from_kwargs('retry_delay', 1)
+            retry_delay = self.from_kwargs('retry_delay')
             task_run.set_retry(session, retry_delay)
         else:
             # the task has completed.
@@ -162,7 +167,7 @@ class Task:
         # if we didn't have does the parent job?
         if self.parent_job:
             return self.parent_job.from_kwargs(key, default)
-        return default
+        return default or DEFAULT_KWARGS.get(key)
 
 
 class Job:
@@ -323,4 +328,5 @@ class Job:
         """
         Helper function to get a value from any extra keyword arguments
         """
+        default = default or DEFAULT_KWARGS.get(key)
         return self._initial_kwargs.get(key, default)

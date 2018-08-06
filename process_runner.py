@@ -68,9 +68,9 @@ def jobs_from_path(path, job_name=None):
     return jobs
 
 
-def init(args):
-    # import sys
-    # print sys.path
+if __name__ == '__main__':
+
+    args = parser.parse_args()
     print(args)
 
     if args.json_payload:
@@ -104,9 +104,3 @@ def init(args):
             task_obj = job_obj[0].tasks.get(task_run.task_name)
             task_obj.run(session, task_run)
         session.close()
-
-
-if __name__ == '__main__':
-
-    args = parser.parse_args()
-    init(args)

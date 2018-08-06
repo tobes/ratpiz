@@ -46,14 +46,14 @@ class _UTC(tzinfo):
 utc = _UTC()
 
 
-class Fail(Exception):
+class Fail(BaseException):
     """
     Raised when a task wishes to fail
     """
     pass
 
 
-class Retry(Exception):
+class Retry(BaseException):
     """
     Raised when a task wishes to retry
     """

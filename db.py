@@ -21,6 +21,11 @@ Base = declarative_base()
 
 PENDING_TIMEOUT = timedelta(seconds=1)
 
+# states
+PENDING = 'pending'
+WAITING = 'waiting'
+RETRY = 'retry'
+
 
 class Job(Base):
     __tablename__ = 'job'
@@ -79,12 +84,12 @@ class RunBase:
                 session.query(cls)
                 .filter(cls.active == True)  # noqa
                 .filter(cls.completed == False)  # noqa
-                .filter(cls.state == 'pending')
+                .filter(cls.state == PENDING)
                 .filter(cls.last_updated <= since)
                 .with_for_update()
         )
         for pending in all_pending.all():
-            pending.state = 'waiting'
+            pending.state = WAITING
             session.add(pending)
         session.commit()
 
@@ -94,7 +99,7 @@ class RunBase:
                 session.query(cls)
                 .filter(cls.active == True)  # noqa
                 .filter(cls.completed == False)  # noqa
-                .filter(cls.state.in_(['waiting', 'retry']))
+                .filter(cls.state.in_([WAITING, RETRY]))
                 .filter(cls.due_time <= func.now())
                 .order_by(cls.due_time)
         )
@@ -151,7 +156,7 @@ class RunBase:
             return result
         data = {
             'due_time': due_time,
-            'state': 'waiting',
+            'state': WAITING,
         }
         if kwargs:
             data.update(kwargs)
@@ -169,7 +174,7 @@ class RunBase:
         return Job.get_by_id(session, self.job_id)
 
     def complete(self, session, state='success'):
-        if state == 'retry':
+        if state == RETRY:
             raise
         self.completed = True
         self.state = state
@@ -180,7 +185,7 @@ class RunBase:
         session.commit()
 
     def set_state(self, session, state):
-        if state == 'retry':
+        if state == RETRY:
             raise
         self.state = state
         session.add(self)
@@ -240,7 +245,7 @@ class TaskRun(Base, RunBase):
                 .filter(TaskRun.task_run_id == self.task_run_id)
                 .with_for_update()
         ).one()
-        task_run.state = 'retry'
+        task_run.state = RETRY
         task_run.due_time = retry_time
         task_run.retries += 1
         session.add(task_run)

@@ -64,7 +64,7 @@ if __name__ == '__main__':
     try:
         while True:
             # any jobs need to run?
-            next_job_run = db.JobRun.next_scheduled(session, state='pending')
+            next_job_run = db.JobRun.next_scheduled(session, state=db.PENDING)
             if next_job_run:
                 print('schedule Job')
                 payload = {
@@ -77,8 +77,9 @@ if __name__ == '__main__':
             # clear any jobs that are pending
             db.JobRun.clear_pending(session)
 
+
             # any tasks need to run?
-            next_task_run = db.TaskRun.next_scheduled(session, state='pending')
+            next_task_run = db.TaskRun.next_scheduled(session, state=db.PENDING)
             if next_task_run:
                 print('schedule Task')
                 payload = {

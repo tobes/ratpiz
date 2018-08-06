@@ -81,7 +81,7 @@ class Task:
         self.name = kwargs.pop('name', action.__name__)
         # we store any extra keywords
         self._initial_kwargs = kwargs
-        self.status = 'waiting'
+        self.status = db.WAITING
         self.parent_job = None
 
     def __repr__(self):
@@ -107,9 +107,9 @@ class Task:
             (task_run.task_name, task_run.due_time)
         )
 
-        if task_run.state == 'pending':
+        if task_run.state == db.PENDING:
             task_run.set_state(session, 'running')
-        elif task_run.state == 'retry':
+        elif task_run.state == db.RETRY:
             task_run.set_state(session, 'running')
 
         # run the task action catching any exceptions
@@ -122,7 +122,7 @@ class Task:
             state = 'fail'
         except Exception as e:  # should this be BaseException?
             exception = e
-            state = 'retry'
+            state = db.RETRY
 
         # log the exception
         if exception:
@@ -130,14 +130,14 @@ class Task:
             print(str(exception))
 
         # if retrying should we now fail?
-        if state == 'retry':
             max_retries = self.from_kwargs('max_retries', 2)
+        if state == db.RETRY:
             if task_run.retries >= max_retries:
                 print('maximum number of retries')
                 state = 'fail'
 
         # What's going on? update the task run
-        if state == 'retry':
+        if state == db.RETRY:
             # we want to retry
             retry_delay = self.from_kwargs('retry_delay', 1)
             task_run.set_retry(session, retry_delay)
@@ -145,7 +145,7 @@ class Task:
             # the task has completed.
             task_run.complete(session, state=state)
             job_run = db.JobRun.get_by_id(session, task_run.job_run_id)
-            job_run.set_state(session, 'waiting')
+            job_run.set_state(session, db.WAITING)
 
         # logging is good
         print('status %s' % self.status)
@@ -303,7 +303,7 @@ class Job:
         related to the job.
         """
         print('job running for %s ...' % job_run.due_time)
-        if job_run.state == 'pending':
+        if job_run.state == db.PENDING:
             job_run.set_state(session, 'running')
             self.schedule_tasks(session, job_run)
         if job_run.set_state == 'running':

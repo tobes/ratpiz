@@ -82,9 +82,13 @@ class Task:
         # we store any extra keywords
         self._initial_kwargs = kwargs
         self.status = 'waiting'
+        self.parent_job = None
 
     def __repr__(self):
         return '<Task `%s` %s>' % (self.name, self.status)
+
+    def set_parent_job(self, parent_job):
+        self.parent_job = parent_job
 
     def run(self, session, task_run, context=None):
         """
@@ -151,7 +155,14 @@ class Task:
         """
         Helper function to get a value from any extra keyword arguments
         """
-        return self._initial_kwargs.get(key, default)
+        try:
+            return self._initial_kwargs[key]
+        except KeyError:
+            pass
+        # if we didn't have does the parent job?
+        if self.parent_job:
+            return self.parent_job.from_kwargs(key, default)
+        return default
 
 
 class Job:
@@ -188,6 +199,7 @@ class Job:
         assert task.name not in self.tasks, (
             'Task `%s` already added' % task.name
         )
+        task.set_parent_job(self)
         self.tasks[task.name] = task
         self.dependencies[task.name] = set()
 
@@ -306,3 +318,9 @@ class Job:
         # set the schedule for our next update
         job_db = db.Job.get_by_id(session, job_run.job_id)
         self.set_schedule(session, job_db)
+
+    def from_kwargs(self, key, default=None):
+        """
+        Helper function to get a value from any extra keyword arguments
+        """
+        return self._initial_kwargs.get(key, default)

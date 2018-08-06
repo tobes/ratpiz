@@ -21,6 +21,13 @@ def to_unix_time(datetime_):
     return (datetime_ - UNIX_EPOC).total_seconds()
 
 
+def datetime_from_timestamp(datetime_):
+    """
+    utc datetime from timestamp
+    """
+    return datetime.fromtimestamp(datetime_, utc)
+
+
 class _UTC(tzinfo):
     """
     A UTC tzinfo.  Helpful for datetimes
@@ -296,8 +303,8 @@ class Job:
                 next_schedule = prev_schedule
 
         # get the date as utc
-        next_schedule_dt = datetime.fromtimestamp(next_schedule, utc)
-        print('schedule for %s' % datetime.fromtimestamp(next_schedule, utc))
+        next_schedule_dt = datetime_from_timestamp(next_schedule)
+        print('schedule for %s' % next_schedule_dt)
         # add job to schedule so that we are run
         db.JobRun.add_run(session, next_schedule_dt, job_id=job_db.job_id)
 

@@ -1,3 +1,5 @@
+import os.path
+
 from datetime import tzinfo, timedelta, datetime
 
 from croniter import croniter
@@ -187,6 +189,11 @@ class Job:
         # TODO parse start date from string?
         self.start_date = kwargs.pop('start_date', None)
         self.schedule = kwargs.pop('schedule', None)
+        # python_path
+        python_path = kwargs.pop('python_path', None)
+        if python_path:
+            python_path = os.path.expanduser(python_path)
+        self.python_path = python_path
         # we store any extra keywords
         self._initial_kwargs = kwargs
 

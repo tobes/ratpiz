@@ -40,6 +40,7 @@ class Job(Base):
     job_id = Column(Integer, primary_key=True)
     name = Column(String)
     path = Column(String)
+    python_path = Column(String)
     last_run = Column(TIMESTAMP)
     active = Column(Boolean, default=True)
     date_creation = Column(TIMESTAMP, default=func.now())
@@ -67,6 +68,7 @@ class Job(Base):
         data = {
             'name': job.name,
             'path': job.path,
+            'python_path': job.python_path,
             'date_creation': datetime.today(),
         }
         j = Job(**data)

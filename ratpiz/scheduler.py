@@ -1,10 +1,14 @@
 import json
+import os.path
 
 from subprocess import Popen, PIPE
 from threading import Thread
 from time import sleep
 
-import db
+from ratpiz import db
+
+
+RUNNER_PATH = os.path.join(os.path.dirname(__file__), 'process_runner.py')
 
 
 class CommandRunner(Thread):
@@ -40,7 +44,7 @@ def run_command(path, payload=None):
 
     cmd = [
         'python',
-        'process_runner.py',
+        RUNNER_PATH,
         '-e', path,
     ]
 

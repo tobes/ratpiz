@@ -5,7 +5,8 @@ from datetime import tzinfo, timedelta, datetime
 
 from croniter import croniter
 
-import db
+from ratpiz import db
+
 
 ZERO = timedelta(0)
 UNIX_EPOC = datetime(1970, 1, 1)

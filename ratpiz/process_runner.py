@@ -2,8 +2,8 @@ import json
 import argparse
 import os.path
 
-import db
 from ratpiz import Job
+from ratpiz import db
 
 parser = argparse.ArgumentParser(description='job processor')
 parser.add_argument(

@@ -54,8 +54,10 @@ def jobs_from_path(path, job_name=None):
     return jobs
 
 
-if __name__ == '__main__':
 
+
+def main():
+    print('main')
     # We have been called let us do what needs to be done.
 
     args = parser.parse_args()
@@ -92,3 +94,7 @@ if __name__ == '__main__':
             task_obj = job_obj[0].tasks.get(task_run.task_name)
             task_obj.run(session, task_run)
         session.close()
+
+
+if __name__ == '__main__':
+    main()

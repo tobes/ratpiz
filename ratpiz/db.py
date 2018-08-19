@@ -34,6 +34,7 @@ RETRY = 'retry'
 SUCCESS = 'success'
 FAIL = 'fail'
 
+
 class Job(Base):
     __tablename__ = 'job'
 

@@ -183,6 +183,9 @@ class RunBase:
     def get_job(self, session):
         return Job.get_by_id(session, self.job_id)
 
+    def get_job_run(self, session):
+        return JobRun.get_by_id(session, self.job_run_id)
+
     def complete(self, session, state=SUCCESS):
         if state == RETRY:
             raise

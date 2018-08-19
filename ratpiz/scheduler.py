@@ -40,10 +40,11 @@ class CommandRunner(Thread):
         print(process.returncode)
 
 
-def run_command(path, payload=None):
+def run_command(path, payload=None, python_path=None):
+    python_path = python_path or 'python'
 
     cmd = [
-        'python',
+        python_path,
         RUNNER_PATH,
         '-e', path,
     ]
@@ -75,8 +76,10 @@ if __name__ == '__main__':
                     'action': 'run',
                     'job_run_id': next_job_run.job_run_id,
                 }
-                path = next_job_run.get_job(session).path
-                run_command(path, payload)
+                job = next_job_run.get_job(session)
+                path = job.path
+                python_path = job.python_path
+                run_command(path, payload, python_path=python_path)
 
             # clear any jobs that are pending
             db.JobRun.clear_pending(session)
@@ -91,8 +94,10 @@ if __name__ == '__main__':
                     'action': 'run',
                     'task_run_id': next_task_run.task_run_id,
                 }
-                path = next_task_run.get_job(session).path
-                run_command(path, payload)
+                job = next_task_run.get_job(session)
+                path = job.path
+                python_path = job.python_path
+                run_command(path, payload, python_path=python_path)
 
             # clear any tasks that are pending
             db.TaskRun.clear_pending(session)

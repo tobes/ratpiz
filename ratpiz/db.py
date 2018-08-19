@@ -1,3 +1,5 @@
+import os.path
+
 from datetime import timedelta, datetime
 
 from sqlalchemy import (
@@ -12,8 +14,12 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import func
 
+# create connection string
+path = os.path.join(os.path.dirname(__file__), 'test.sqlite')
+connection_str = 'sqlite:///{}'.format(path)
 
-engine = create_engine('sqlite:///test.sqlite', echo=False)
+
+engine = create_engine(connection_str, echo=False)
 Session = sessionmaker(bind=engine)
 
 

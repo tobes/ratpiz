@@ -1,9 +1,12 @@
 import json
 import argparse
-import os.path
+import os
+import sys
 
 from ratpiz import Job
 from ratpiz import db
+from ratpiz import scheduler
+
 
 parser = argparse.ArgumentParser(description='job processor')
 parser.add_argument(
@@ -54,6 +57,20 @@ def jobs_from_path(path, job_name=None):
     return jobs
 
 
+def register():
+    """
+    register a job with the scheduler
+    """
+    path = sys.argv[1]
+    cwd = os.getcwd()
+    path = os.path.expanduser(os.path.join(cwd, path))
+    print(cwd)
+    print('register %s' % path)
+    # for testing we register a job
+    payload = {
+        'action': 'register',
+    }
+    scheduler.run_command(path, payload=payload)
 
 
 def main():

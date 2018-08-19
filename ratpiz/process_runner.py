@@ -3,8 +3,8 @@ import argparse
 import os
 import sys
 
-from ratpiz import Job
 from ratpiz import db
+from ratpiz import Job
 from ratpiz import scheduler
 
 

@@ -52,6 +52,7 @@ def run_command(path, payload=None, python_path=None):
     if payload:
         cmd += ['--json', json.dumps(payload)]
 
+    print(' '.join(cmd))
     # run command in a thread
     t = CommandRunner(cmd)
     t.start()

@@ -1,0 +1,43 @@
+Things that would be nice to have
+
+* single table for all commands scheduled
+
+* heartbeat on tasks, re-run if heartbeat missed etc
+
+* python versions and venvs
+
+* job run status - do we have this?
+
+* conditional tasks (on fail etc)
+
+* skip tasks
+
+* branch tasks
+
+* inter-task data
+
+* logging
+
+* dependency validation
+
+* separation of functions from data storage
+
+* light Job Task definitions so don't need all ratpiz in venv
+
+* payload via db
+
+* multiple job/task runs
+
+* limits total tasks running
+
+* basic front end
+
+* basic cli - via scheduler
+
+* time zones
+
+* documentation
+
+* tests
+
+* db agnostic including RDB, nosql etc

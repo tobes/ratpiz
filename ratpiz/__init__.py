@@ -144,9 +144,9 @@ class Task:
         )
 
         if task_run.state == db.PENDING:
-            task_run.set_state(session, 'running')
+            task_run.set_state(session, db.RUNNING)
         elif task_run.state == db.RETRY:
-            task_run.set_state(session, 'running')
+            task_run.set_state(session, db.RUNNING)
 
         # run the task action catching any exceptions
         result = None
@@ -184,10 +184,13 @@ class Task:
             task_run.complete(session, state=state)
             job_run = db.JobRun.get_by_id(session, task_run.job_run_id)
             job_run.set_state(session, db.WAITING)
+            event = db.Event.get_by_uuid(session, job_run.uuid)
+            event.set_state(session, db.WAITING)
 
         # logging is good
         print('status %s' % self.status)
         print('result %s' % result)
+        return state
 
     def from_kwargs(self, key, default=None):
         """
@@ -282,7 +285,7 @@ class Job:
             # all our tasks are done :)
             print('all tasks complete')
             self.run_completed(session, job_run)
-            return
+            return db.SUCCESS
         print('completed_tasks %s' % completed_tasks)
 
         # get and check each task for the job
@@ -300,12 +303,19 @@ class Job:
 
             # add task
             print('adding task %s' % task_name)
-            task_run = db.TaskRun.add_run(
+            task = task_run = db.TaskRun.add_run(
                     session,
                     job_run.due_time,
                     job_run_id=job_run.job_run_id,
                     task_name=task_name,
                     job_id=job_run.job_id,
+            )
+            print('added %s' % task.uuid)
+            db.Event.add_run(
+                    session,
+                    due_time=task.due_time,
+                    event_type=db.TYPE_TASK,
+                    uuid=task.uuid,
             )
 
     def set_schedule(self, session, job_db):
@@ -337,7 +347,16 @@ class Job:
         next_schedule_dt = datetime_from_timestamp(next_schedule)
         print('schedule for %s' % next_schedule_dt)
         # add job to schedule so that we are run
-        db.JobRun.add_run(session, next_schedule_dt, job_id=job_db.job_id)
+        job = db.JobRun.add_run(
+            session, next_schedule_dt, job_id=job_db.job_id
+        )
+        print('added %s' % job.uuid)
+        db.Event.add_run(
+                session,
+                due_time=job.due_time,
+                event_type=db.TYPE_JOB,
+                uuid=job.uuid,
+        )
 
     def run(self, session, job_run):
         """
@@ -346,11 +365,9 @@ class Job:
         related to the job.
         """
         print('job running for %s ...' % job_run.due_time)
-        if job_run.state == db.PENDING:
-            job_run.set_state(session, 'running')
-            self.schedule_tasks(session, job_run)
-        if job_run.set_state == 'running':
-            print('...running...')
+        job_run.set_state(session, db.RUNNING)
+        state = self.schedule_tasks(session, job_run)
+        return state
 
     def run_completed(self, session, job_run):
         """

@@ -9,6 +9,7 @@ def fn_hello(context):
 
 
 def fn_exception(context):
+
     sleep(0.1)
     context.retry_task('retry...')
     print('exception')

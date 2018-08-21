@@ -87,29 +87,40 @@ def main():
 
     if payload.get('action') == 'register':
         jobs = jobs_from_path(args.execution_path)
-        print('@@@@ job')
         for job in jobs:
             job.set_path(os.path.abspath(args.execution_path))
             session = db.Session()
             job.register(session)
             session.close()
-
     if payload.get('action') == 'run':
-        session = db.Session()
-        job_run_id = payload.get('job_run_id')
-        if job_run_id:
-            job_run = db.JobRun.get_by_id(session, job_run_id)
-            job = job_run.get_job(session)
-            job_obj = jobs_from_path(job.path, job.name)
-            job_obj[0].run(session, job_run)
+        uuid = payload.get('uuid')
+        if not uuid:
+            print('No uuid')
+        print('Running Event %s' % uuid)
+        event_type = payload.get('event_type')
 
-        task_run_id = payload.get('task_run_id')
-        if task_run_id:
-            task_run = db.TaskRun.get_by_id(session, task_run_id)
+        session = db.Session()
+        event_run = db.Event.get_by_uuid(session, uuid)
+        event_run.set_state(session, db.RUNNING)
+        print(event_run)
+        if event_type == 'job':
+            job_run = db.JobRun.get_by_uuid(session, uuid)
+            print(job_run)
+            job = job_run.get_job(session)
+            print(job)
+            job_obj = jobs_from_path(job.path, job.name)
+            print(job_obj[0])
+            save_state = job_obj[0].run(session, job_run)
+
+        elif event_type == 'task':
+            task_run = db.TaskRun.get_by_uuid(session, uuid)
             job = task_run.get_job(session)
             job_obj = jobs_from_path(job.path, job.name)
             task_obj = job_obj[0].tasks.get(task_run.task_name)
-            task_obj.run(session, task_run)
+            save_state = task_obj.run(session, task_run)
+        if save_state:
+            print('%s %s' % (uuid, save_state))
+            event_run.set_state(session, save_state)
         session.close()
 
 

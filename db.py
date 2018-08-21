@@ -1,5 +1,7 @@
 from datetime import timedelta, datetime
 
+from uuid import uuid4
+
 from sqlalchemy import (
     create_engine,
     Column,
@@ -23,10 +25,108 @@ PENDING_TIMEOUT = timedelta(seconds=1)
 
 # states
 PENDING = 'pending'
+RUNNING = 'running'
 WAITING = 'waiting'
 RETRY = 'retry'
 SUCCESS = 'success'
 FAIL = 'fail'
+
+# event types
+TYPE_JOB = 'job'
+TYPE_TASK = 'task'
+
+
+def make_uuid():
+    return str(uuid4())
+
+
+class Event(Base):
+    __tablename__ = 'event'
+
+    event_id = Column(Integer, primary_key=True)
+    event_type = Column(String)
+    uuid = Column(String)
+    path = Column(String)
+    state = Column(String)
+    active = Column(Boolean, default=True)
+    completed = Column(Boolean, default=False)
+    due_time = Column(TIMESTAMP)
+    heartbeat = Column(TIMESTAMP)
+    date_creation = Column(TIMESTAMP, default=func.now())
+    last_updated = Column(TIMESTAMP, onupdate=func.now())
+
+    def set_state(self, session, state):
+        self.state = state
+        session.add(self)
+        session.commit()
+
+    @classmethod
+    def set_heartbeat(cls, session, uuid):
+        event = Event.get_by_uuid(session, uuid)
+        heartbeat = func.now()
+        print('heartbeat %s for %s' % (heartbeat, uuid))
+        event.heartbeat = heartbeat
+        session.add(event)
+        session.commit()
+
+    @classmethod
+    def get_by_uuid(cls, session, uuid):
+        event = (
+                session.query(cls)
+                .filter(cls.uuid == uuid)
+                .first()
+        )
+        return event
+
+    @classmethod
+    def add_run(cls, session, due_time, **kwargs):
+        print('add_run event')
+        print(kwargs)
+        # printmax_retries >= ('@@ %s %s' % (job_id, due_time))
+        query = (
+                session.query(cls)
+        )
+
+        if cls == JobRun:
+            query = query.filter(cls.due_time == due_time)
+        for key, value in kwargs.items():
+            query = query.filter(getattr(cls, key) == value)
+        result = query.first()
+        if result:
+            print('exists..')
+            return result
+        data = {
+            'due_time': due_time,
+            'state': WAITING,
+        }
+        if kwargs:
+            data.update(kwargs)
+        run = cls(**data)
+        session.add(run)
+        session.commit()
+        return run
+
+    @classmethod
+    def next_scheduled(cls, session, state=None):
+        scheduled = (
+                session.query(cls)
+                .filter(cls.active == True)  # noqa
+                .filter(cls.completed == False)  # noqa
+                .filter(cls.state.in_([WAITING, RETRY]))
+                .filter(cls.due_time <= func.now())
+                .order_by(cls.due_time)
+        )
+        if state:
+            scheduled = scheduled.with_for_update()
+            next_scheduled = scheduled.first()
+            if next_scheduled:
+                next_scheduled.state = state
+                session.add(next_scheduled)
+                session.commit()
+        else:
+            next_scheduled = scheduled.first()
+        return next_scheduled
+
 
 class Job(Base):
     __tablename__ = 'job'
@@ -125,6 +225,15 @@ class RunBase:
         return job_run
 
     @classmethod
+    def get_by_uuid(cls, session, uuid):
+        job_run = (
+                session.query(cls)
+                .filter(cls.uuid == uuid)
+                .first()
+        )
+        return job_run
+
+    @classmethod
     def get_scheduled(cls, session, **kwargs):
         scheduled = (
                 session.query(func.max(cls.due_time))
@@ -161,9 +270,12 @@ class RunBase:
         }
         if kwargs:
             data.update(kwargs)
+        print('add %s' % cls.__name__)
+        print(data)
         run = cls(**data)
         session.add(run)
         session.commit()
+        return run
 
     def get_run_obj(self, session):
         return self.__child_object__.get_by_id(
@@ -202,6 +314,7 @@ class JobRun(Base, RunBase):
 
     job_run_id = Column(Integer, primary_key=True)
     job_id = Column(Integer)
+    uuid = Column(String, default=make_uuid)
     state = Column(String)
     active = Column(Boolean, default=True)
     completed = Column(Boolean, default=False)
@@ -230,6 +343,7 @@ class TaskRun(Base, RunBase):
     task_run_id = Column(Integer, primary_key=True)
     job_run_id = Column(Integer)
     job_id = Column(Integer)
+    uuid = Column(String, default=make_uuid)
     task_name = Column(String)
     retries = Column(Integer, default=0)
     state = Column(String)

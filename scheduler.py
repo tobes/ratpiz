@@ -13,19 +13,24 @@ class CommandRunner(Thread):
     Monitor the process and log output.
     """
 
-    def __init__(self, cmd):
+    def __init__(self, cmd, uuid):
         Thread.__init__(self)
         self.cmd = cmd
+        self.uuid = uuid
 
     def run(self):
         """
         Run the command.
         """
+        session = db.Session()
+        uuid = self.uuid
         # run the command
         process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
 
         # monitor until it finishes
         while process.poll() is None:
+            if uuid:
+                db.Event.set_heartbeat(session, uuid)
             # sleep so as not to use too many resources
             sleep(1)
 
@@ -36,19 +41,22 @@ class CommandRunner(Thread):
         print(process.returncode)
 
 
-def run_command(path, payload=None):
+def run_command(payload=None):
+
+    path = payload.get('path')
+    uuid = payload.get('uuid')
 
     cmd = [
         'python',
         'process_runner.py',
-        '-e', path,
     ]
-
+    if path:
+        cmd += ['-e', path]
     if payload:
         cmd += ['--json', json.dumps(payload)]
 
     # run command in a thread
-    t = CommandRunner(cmd)
+    t = CommandRunner(cmd, uuid)
     t.start()
 
 
@@ -57,41 +65,26 @@ if __name__ == '__main__':
     # for testing we register a job
     payload = {
         'action': 'register',
+        'path': 'test_job.py',
     }
-    run_command('test_job.py', payload)
+    run_command(payload=payload)
 
     session = db.Session()
     try:
         while True:
-            # any jobs need to run?
-            next_job_run = db.JobRun.next_scheduled(session, state=db.PENDING)
-            if next_job_run:
-                print('schedule Job')
+            # any events need to run?
+            next_event = db.Event.next_scheduled(session, state=db.PENDING)
+            if next_event:
+                print('schedule Event')
                 payload = {
                     'action': 'run',
-                    'job_run_id': next_job_run.job_run_id,
+                    'event_type': next_event.event_type,
+                    'uuid': next_event.uuid,
                 }
-                path = next_job_run.get_job(session).path
-                run_command(path, payload)
+                run_command(payload=payload)
 
             # clear any jobs that are pending
-            db.JobRun.clear_pending(session)
-
-            # any tasks need to run?
-            next_task_run = db.TaskRun.next_scheduled(
-                    session, state=db.PENDING
-            )
-            if next_task_run:
-                print('schedule Task')
-                payload = {
-                    'action': 'run',
-                    'task_run_id': next_task_run.task_run_id,
-                }
-                path = next_task_run.get_job(session).path
-                run_command(path, payload)
-
-            # clear any tasks that are pending
-            db.TaskRun.clear_pending(session)
+          #  db.JobRun.clear_pending(session)
 
             # sleep so as not to use too many resources
             sleep(1)

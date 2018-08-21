@@ -120,9 +120,9 @@ class Task:
         )
 
         if task_run.state == db.PENDING:
-            task_run.set_state(session, 'running')
+            task_run.set_state(session, db.RUNNING)
         elif task_run.state == db.RETRY:
-            task_run.set_state(session, 'running')
+            task_run.set_state(session, db.RUNNING)
 
         # run the task action catching any exceptions
         result = None
@@ -271,13 +271,21 @@ class Job:
 
             # add task
             print('adding task %s' % task_name)
-            task_run = db.TaskRun.add_run(
+            task = task_run = db.TaskRun.add_run(
                     session,
                     job_run.due_time,
                     job_run_id=job_run.job_run_id,
                     task_name=task_name,
                     job_id=job_run.job_id,
             )
+            print('added %s' % task.uuid)
+            db.Event.add_run(
+                    session,
+                    due_time=task.due_time,
+                    event_type=db.TYPE_TASK,
+                    uuid=task.uuid,
+            )
+
 
     def set_schedule(self, session, job_db):
         """
@@ -308,7 +316,15 @@ class Job:
         next_schedule_dt = datetime_from_timestamp(next_schedule)
         print('schedule for %s' % next_schedule_dt)
         # add job to schedule so that we are run
-        db.JobRun.add_run(session, next_schedule_dt, job_id=job_db.job_id)
+        job = db.JobRun.add_run(session, next_schedule_dt, job_id=job_db.job_id)
+        print('added %s' % job.uuid)
+        db.Event.add_run(
+                session,
+                due_time=job.due_time,
+                event_type=db.TYPE_JOB,
+                uuid=job.uuid,
+        )
+
 
     def run(self, session, job_run):
         """
@@ -317,11 +333,15 @@ class Job:
         related to the job.
         """
         print('job running for %s ...' % job_run.due_time)
-        if job_run.state == db.PENDING:
-            job_run.set_state(session, 'running')
-            self.schedule_tasks(session, job_run)
-        if job_run.set_state == 'running':
-            print('...running...')
+        job_run.set_state(session, db.RUNNING)
+        self.schedule_tasks(session, job_run)
+
+       # if job_run.state == db.PENDING:
+       #     print('pending -> running')
+       #     job_run.set_state(session, db.RUNNING)
+       #     self.schedule_tasks(session, job_run)
+       # if job_run.set_state == db.RUNNING:
+       #     print('...running...')
 
     def run_completed(self, session, job_run):
         """

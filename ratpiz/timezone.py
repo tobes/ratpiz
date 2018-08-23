@@ -4,18 +4,6 @@ ZERO = timedelta(0)
 UNIX_EPOC = datetime(1970, 1, 1)
 
 
-def to_unix_time(datetime_):
-    # python 3.3+ return datetime_.timestamp()
-    return (datetime_ - UNIX_EPOC).total_seconds()
-
-
-def datetime_from_timestamp(datetime_):
-    """
-    utc datetime from timestamp
-    """
-    return datetime.fromtimestamp(datetime_, utc)
-
-
 class _UTC(tzinfo):
     """
     A UTC tzinfo.  Helpful for datetimes
@@ -31,4 +19,17 @@ class _UTC(tzinfo):
         return ZERO
 
 
-utc = _UTC()
+_utc = _UTC()
+del _UTC
+
+
+def to_unix_time(datetime_):
+    # python 3.3+ return datetime_.timestamp()
+    return (datetime_ - UNIX_EPOC).total_seconds()
+
+
+def datetime_from_timestamp(datetime_):
+    """
+    utc datetime from timestamp
+    """
+    return datetime.fromtimestamp(datetime_, _utc)

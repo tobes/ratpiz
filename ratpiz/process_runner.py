@@ -110,14 +110,14 @@ def main():
             print(job)
             job_obj = jobs_from_path(job.path, job.name)
             print(job_obj[0])
-            save_state = job_obj[0].run(session, job_run)
+            save_state = job_obj[0].run_job(session, job_run)
 
         elif event_type == 'task':
             task_run = db.TaskRun.get_by_uuid(session, uuid)
             job = task_run.get_job(session)
             job_obj = jobs_from_path(job.path, job.name)
             task_obj = job_obj[0].tasks.get(task_run.task_name)
-            save_state = task_obj.run(session, task_run)
+            save_state = task_obj.run_task(session, task_run)
         if save_state:
             print('%s %s' % (uuid, save_state))
             event_run.set_state(session, save_state)

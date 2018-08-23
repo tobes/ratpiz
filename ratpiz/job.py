@@ -38,7 +38,7 @@ class Task:
     def set_parent_job(self, parent_job):
         self.parent_job = parent_job
 
-    def run(self, session, task_run, context=None):
+    def run_task(self, session, task_run, context=None):
         """
         Trigger the task.
 
@@ -270,7 +270,7 @@ class Job:
                 uuid=job.uuid,
         )
 
-    def run(self, session, job_run):
+    def run_job(self, session, job_run):
         """
         Run the job.
         Check which tasks if any need to be scheduled and do any bookkeeping

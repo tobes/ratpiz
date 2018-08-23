@@ -7,6 +7,10 @@ from ratpiz import db
 from ratpiz import Job
 from ratpiz import scheduler
 
+from ratpiz.constants import (
+    RUNNING,
+)
+
 
 parser = argparse.ArgumentParser(description='job processor')
 parser.add_argument(
@@ -101,7 +105,7 @@ def main():
 
         session = db.Session()
         event_run = db.Event.get_by_uuid(session, uuid)
-        event_run.set_state(session, db.RUNNING)
+        event_run.set_state(session, RUNNING)
         print(event_run)
         if event_type == 'job':
             job_run = db.JobRun.get_by_uuid(session, uuid)

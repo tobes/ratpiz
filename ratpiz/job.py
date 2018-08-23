@@ -8,6 +8,18 @@ from ratpiz import exceptions
 
 from ratpiz.context import Context
 
+from ratpiz.constants import (
+    RETRY,
+    RUNNING,
+    FAIL,
+    WAITING,
+    SUCCESS,
+    PENDING,
+
+    TYPE_JOB,
+    TYPE_TASK,
+)
+
 
 DEFAULT_KWARGS = {
     'retries': 1,
@@ -29,7 +41,7 @@ class Task:
         self.name = kwargs.pop('name', action.__name__)
         # we store any extra keywords
         self._initial_kwargs = kwargs
-        self.status = db.WAITING
+        self.status = WAITING
         self.parent_job = None
 
     def __repr__(self):
@@ -55,24 +67,24 @@ class Task:
             (task_run.task_name, task_run.due_time)
         )
 
-        if task_run.state == db.PENDING:
-            task_run.set_state(session, db.RUNNING)
-        elif task_run.state == db.RETRY:
-            task_run.set_state(session, db.RUNNING)
+        if task_run.state == PENDING:
+            task_run.set_state(session, RUNNING)
+        elif task_run.state == RETRY:
+            task_run.set_state(session, RUNNING)
 
         # run the task action catching any exceptions
         result = None
         exception = None
         try:
             result = self._action(context)
-            state = db.SUCCESS
+            state = SUCCESS
         except exceptions.Fail as e:
-            state = db.FAIL
+            state = FAIL
         except exceptions.Retry as e:
-            state = db.RETRY
+            state = RETRY
         except Exception as e:  # should this be BaseException?
             exception = e
-            state = db.RETRY
+            state = RETRY
 
         # log the exception
         if exception:
@@ -80,14 +92,14 @@ class Task:
             print(str(exception))
 
         # if retrying should we now fail?
-        if state == db.RETRY:
+        if state == RETRY:
             max_retries = self.from_kwargs('retries')
             if task_run.retries >= max_retries:
                 print('maximum number of retries')
-                state = db.FAIL
+                state = FAIL
 
         # What's going on? update the task run
-        if state == db.RETRY:
+        if state == RETRY:
             # we want to retry
             retry_delay = self.from_kwargs('retry_delay')
             task_run.set_retry(session, retry_delay)
@@ -95,9 +107,9 @@ class Task:
             # the task has completed.
             task_run.complete(session, state=state)
             job_run = db.JobRun.get_by_id(session, task_run.job_run_id)
-            job_run.set_state(session, db.WAITING)
+            job_run.set_state(session, WAITING)
             event = db.Event.get_by_uuid(session, job_run.uuid)
-            event.set_state(session, db.WAITING)
+            event.set_state(session, WAITING)
 
         # logging is good
         print('status %s' % self.status)
@@ -197,7 +209,7 @@ class Job:
             # all our tasks are done :)
             print('all tasks complete')
             self.run_completed(session, job_run)
-            return db.SUCCESS
+            return SUCCESS
         print('completed_tasks %s' % completed_tasks)
 
         # get and check each task for the job
@@ -226,7 +238,7 @@ class Job:
             db.Event.add_run(
                     session,
                     due_time=task.due_time,
-                    event_type=db.TYPE_TASK,
+                    event_type=TYPE_TASK,
                     uuid=task.uuid,
             )
 
@@ -266,7 +278,7 @@ class Job:
         db.Event.add_run(
                 session,
                 due_time=job.due_time,
-                event_type=db.TYPE_JOB,
+                event_type=TYPE_JOB,
                 uuid=job.uuid,
         )
 
@@ -277,7 +289,7 @@ class Job:
         related to the job.
         """
         print('job running for %s ...' % job_run.due_time)
-        job_run.set_state(session, db.RUNNING)
+        job_run.set_state(session, RUNNING)
         state = self.schedule_tasks(session, job_run)
         return state
 

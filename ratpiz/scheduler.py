@@ -7,6 +7,10 @@ from time import sleep
 
 from ratpiz import db
 
+from ratpiz.constants import (
+    PENDING,
+)
+
 
 RUNNER_PATH = os.path.join(os.path.dirname(__file__), 'process_runner.py')
 
@@ -78,7 +82,7 @@ if __name__ == '__main__':
     try:
         while True:
             # any events need to run?
-            next_event = db.Event.next_scheduled(session, state=db.PENDING)
+            next_event = db.Event.next_scheduled(session, state=PENDING)
             if next_event:
                 print('schedule Event')
                 payload = {

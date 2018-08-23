@@ -16,6 +16,13 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import func
 
+from ratpiz.constants import (
+    RETRY,
+    WAITING,
+    SUCCESS,
+    PENDING,
+)
+
 # create connection string
 path = os.path.join(os.path.dirname(__file__), 'test.sqlite')
 connection_str = 'sqlite:///{}'.format(path)
@@ -28,18 +35,6 @@ Session = sessionmaker(bind=engine)
 Base = declarative_base()
 
 PENDING_TIMEOUT = timedelta(seconds=1)
-
-# states
-PENDING = 'pending'
-RUNNING = 'running'
-WAITING = 'waiting'
-RETRY = 'retry'
-SUCCESS = 'success'
-FAIL = 'fail'
-
-# event types
-TYPE_JOB = 'job'
-TYPE_TASK = 'task'
 
 
 def make_uuid():

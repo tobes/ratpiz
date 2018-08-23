@@ -48,7 +48,23 @@ class Task:
         return '<Task `%s` %s>' % (self.name, self.status)
 
     def set_parent_job(self, parent_job):
+        """
+        We want the parent job to be able to get the default args.
+        """
         self.parent_job = parent_job
+
+    def from_kwargs(self, key, default=None):
+        """
+        Helper function to get a value from any extra keyword arguments
+        """
+        try:
+            return self._initial_kwargs[key]
+        except KeyError:
+            pass
+        # if we didn't have does the parent job?
+        if self.parent_job:
+            return self.parent_job.from_kwargs(key, default)
+        return default or DEFAULT_KWARGS.get(key)
 
     def run_task(self, session, task_run, context=None):
         """
@@ -116,19 +132,6 @@ class Task:
         print('result %s' % result)
         return state
 
-    def from_kwargs(self, key, default=None):
-        """
-        Helper function to get a value from any extra keyword arguments
-        """
-        try:
-            return self._initial_kwargs[key]
-        except KeyError:
-            pass
-        # if we didn't have does the parent job?
-        if self.parent_job:
-            return self.parent_job.from_kwargs(key, default)
-        return default or DEFAULT_KWARGS.get(key)
-
 
 class Job:
     """
@@ -192,6 +195,23 @@ class Job:
 
         job_db = db.Job.register(session, self)
         self.set_schedule(session, job_db)
+
+    def run_completed(self, session, job_run):
+        """
+        All tasks have been processed.  Do any required bookkeeping.
+        """
+        # mark job as completed in database
+        job_run.complete(session)
+        # set the schedule for our next update
+        job_db = db.Job.get_by_id(session, job_run.job_id)
+        self.set_schedule(session, job_db)
+
+    def from_kwargs(self, key, default=None):
+        """
+        Helper function to get a value from any extra keyword arguments
+        """
+        default = default or DEFAULT_KWARGS.get(key)
+        return self._initial_kwargs.get(key, default)
 
     def schedule_tasks(self, session, job_run):
         """
@@ -292,20 +312,3 @@ class Job:
         job_run.set_state(session, RUNNING)
         state = self.schedule_tasks(session, job_run)
         return state
-
-    def run_completed(self, session, job_run):
-        """
-        All tasks have been processed.  Do any required bookkeeping.
-        """
-        # mark job as completed in database
-        job_run.complete(session)
-        # set the schedule for our next update
-        job_db = db.Job.get_by_id(session, job_run.job_id)
-        self.set_schedule(session, job_db)
-
-    def from_kwargs(self, key, default=None):
-        """
-        Helper function to get a value from any extra keyword arguments
-        """
-        default = default or DEFAULT_KWARGS.get(key)
-        return self._initial_kwargs.get(key, default)

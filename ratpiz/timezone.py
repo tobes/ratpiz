@@ -24,6 +24,9 @@ del _UTC
 
 
 def to_unix_time(datetime_):
+    """
+    convert a datetime into a unix time (seconds since the epoc)
+    """
     # python 3.3+ return datetime_.timestamp()
     return (datetime_ - UNIX_EPOC).total_seconds()
 

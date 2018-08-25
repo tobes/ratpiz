@@ -17,10 +17,10 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import func
 
 from ratpiz.constants import (
-    RETRY,
-    WAITING,
-    SUCCESS,
-    PENDING,
+    STATE_RETRY,
+    STATE_WAITING,
+    STATE_SUCCESS,
+    STATE_PENDING,
 )
 
 # create connection string
@@ -98,7 +98,7 @@ class Event(Base):
             return result
         data = {
             'due_time': due_time,
-            'state': WAITING,
+            'state': STATE_WAITING,
         }
         if kwargs:
             data.update(kwargs)
@@ -113,7 +113,7 @@ class Event(Base):
                 session.query(cls)
                 .filter(cls.active == True)  # noqa
                 .filter(cls.completed == False)  # noqa
-                .filter(cls.state.in_([WAITING, RETRY]))
+                .filter(cls.state.in_([STATE_WAITING, STATE_RETRY]))
                 .filter(cls.due_time <= func.now())
                 .order_by(cls.due_time)
         )
@@ -188,12 +188,12 @@ class RunBase:
                 session.query(cls)
                 .filter(cls.active == True)  # noqa
                 .filter(cls.completed == False)  # noqa
-                .filter(cls.state == PENDING)
+                .filter(cls.state == STATE_PENDING)
                 .filter(cls.last_updated <= since)
                 .with_for_update()
         )
         for pending in all_pending.all():
-            pending.state = WAITING
+            pending.state = STATE_WAITING
             session.add(pending)
         session.commit()
 
@@ -203,7 +203,7 @@ class RunBase:
                 session.query(cls)
                 .filter(cls.active == True)  # noqa
                 .filter(cls.completed == False)  # noqa
-                .filter(cls.state.in_([WAITING, RETRY]))
+                .filter(cls.state.in_([STATE_WAITING, STATE_RETRY]))
                 .filter(cls.due_time <= func.now())
                 .order_by(cls.due_time)
         )
@@ -269,7 +269,7 @@ class RunBase:
             return result
         data = {
             'due_time': due_time,
-            'state': WAITING,
+            'state': STATE_WAITING,
         }
         if kwargs:
             data.update(kwargs)
@@ -292,8 +292,8 @@ class RunBase:
     def get_job_run(self, session):
         return JobRun.get_by_id(session, self.job_run_id)
 
-    def complete(self, session, state=SUCCESS):
-        if state == RETRY:
+    def complete(self, session, state=STATE_SUCCESS):
+        if state == STATE_RETRY:
             raise
         self.completed = True
         self.state = state
@@ -304,7 +304,7 @@ class RunBase:
         session.commit()
 
     def set_state(self, session, state):
-        if state == RETRY:
+        if state == STATE_RETRY:
             raise
         self.state = state
         session.add(self)
@@ -366,7 +366,7 @@ class TaskRun(Base, RunBase):
                 .filter(TaskRun.task_run_id == self.task_run_id)
                 .with_for_update()
         ).one()
-        task_run.state = RETRY
+        task_run.state = STATE_RETRY
         task_run.due_time = retry_time
         task_run.retries += 1
         session.add(task_run)

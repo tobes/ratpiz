@@ -9,12 +9,12 @@ from ratpiz import exceptions
 from ratpiz.context import Context
 
 from ratpiz.constants import (
-    RETRY,
-    RUNNING,
-    FAIL,
-    WAITING,
-    SUCCESS,
-    PENDING,
+    STATE_RETRY,
+    STATE_RUNNING,
+    STATE_FAIL,
+    STATE_WAITING,
+    STATE_SUCCESS,
+    STATE_PENDING,
 
     TYPE_JOB,
     TYPE_TASK,
@@ -41,7 +41,7 @@ class Task:
         self.name = kwargs.pop('name', action.__name__)
         # we store any extra keywords
         self._initial_kwargs = kwargs
-        self.status = WAITING
+        self.status = STATE_WAITING
         self.parent_job = None
 
     def __repr__(self):
@@ -83,24 +83,24 @@ class Task:
             (task_run.task_name, task_run.due_time)
         )
 
-        if task_run.state == PENDING:
-            task_run.set_state(session, RUNNING)
-        elif task_run.state == RETRY:
-            task_run.set_state(session, RUNNING)
+        if task_run.state == STATE_PENDING:
+            task_run.set_state(session, STATE_RUNNING)
+        elif task_run.state == STATE_RETRY:
+            task_run.set_state(session, STATE_RUNNING)
 
         # run the task action catching any exceptions
         result = None
         exception = None
         try:
             result = self._action(context)
-            state = SUCCESS
+            state = STATE_SUCCESS
         except exceptions.Fail as e:
-            state = FAIL
+            state = STATE_FAIL
         except exceptions.Retry as e:
-            state = RETRY
+            state = STATE_RETRY
         except Exception as e:  # should this be BaseException?
             exception = e
-            state = RETRY
+            state = STATE_RETRY
 
         # log the exception
         if exception:
@@ -108,14 +108,14 @@ class Task:
             print(str(exception))
 
         # if retrying should we now fail?
-        if state == RETRY:
+        if state == STATE_RETRY:
             max_retries = self.from_kwargs('retries')
             if task_run.retries >= max_retries:
                 print('maximum number of retries')
-                state = FAIL
+                state = STATE_FAIL
 
         # What's going on? update the task run
-        if state == RETRY:
+        if state == STATE_RETRY:
             # we want to retry
             retry_delay = self.from_kwargs('retry_delay')
             task_run.set_retry(session, retry_delay)
@@ -123,9 +123,9 @@ class Task:
             # the task has completed.
             task_run.complete(session, state=state)
             job_run = db.JobRun.get_by_id(session, task_run.job_run_id)
-            job_run.set_state(session, WAITING)
+            job_run.set_state(session, STATE_WAITING)
             event = db.Event.get_by_uuid(session, job_run.uuid)
-            event.set_state(session, WAITING)
+            event.set_state(session, STATE_WAITING)
 
         # logging is good
         print('status %s' % self.status)
@@ -229,7 +229,7 @@ class Job:
             # all our tasks are done :)
             print('all tasks complete')
             self.run_completed(session, job_run)
-            return SUCCESS
+            return STATE_SUCCESS
         print('completed_tasks %s' % completed_tasks)
 
         # get and check each task for the job
@@ -309,6 +309,6 @@ class Job:
         related to the job.
         """
         print('job running for %s ...' % job_run.due_time)
-        job_run.set_state(session, RUNNING)
+        job_run.set_state(session, STATE_RUNNING)
         state = self.schedule_tasks(session, job_run)
         return state

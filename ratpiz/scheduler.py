@@ -8,7 +8,7 @@ from time import sleep
 from ratpiz import db
 
 from ratpiz.constants import (
-    PENDING,
+    STATE_PENDING,
 )
 
 
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     try:
         while True:
             # any events need to run?
-            next_event = db.Event.next_scheduled(session, state=PENDING)
+            next_event = db.Event.next_scheduled(session, state=STATE_PENDING)
             if next_event:
                 print('schedule Event')
                 payload = {

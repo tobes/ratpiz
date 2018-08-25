@@ -8,7 +8,7 @@ from ratpiz import Job
 from ratpiz import scheduler
 
 from ratpiz.constants import (
-    RUNNING,
+    STATE_RUNNING,
 )
 
 
@@ -105,7 +105,7 @@ def main():
 
         session = db.Session()
         event_run = db.Event.get_by_uuid(session, uuid)
-        event_run.set_state(session, RUNNING)
+        event_run.set_state(session, STATE_RUNNING)
         print(event_run)
         if event_type == 'job':
             job_run = db.JobRun.get_by_uuid(session, uuid)

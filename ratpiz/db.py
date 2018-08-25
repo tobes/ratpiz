@@ -21,6 +21,8 @@ from ratpiz.constants import (
     STATE_WAITING,
     STATE_SUCCESS,
     STATE_PENDING,
+
+    STATES_RUNNABLE,
 )
 
 # create connection string
@@ -113,7 +115,7 @@ class Event(Base):
                 session.query(cls)
                 .filter(cls.active == True)  # noqa
                 .filter(cls.completed == False)  # noqa
-                .filter(cls.state.in_([STATE_WAITING, STATE_RETRY]))
+                .filter(cls.state.in_(STATES_RUNNABLE))
                 .filter(cls.due_time <= func.now())
                 .order_by(cls.due_time)
         )
@@ -203,7 +205,7 @@ class RunBase:
                 session.query(cls)
                 .filter(cls.active == True)  # noqa
                 .filter(cls.completed == False)  # noqa
-                .filter(cls.state.in_([STATE_WAITING, STATE_RETRY]))
+                .filter(cls.state.in_(STATES_RUNNABLE))
                 .filter(cls.due_time <= func.now())
                 .order_by(cls.due_time)
         )

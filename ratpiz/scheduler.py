@@ -1,4 +1,5 @@
 import json
+import logging
 import os.path
 
 from subprocess import Popen, PIPE
@@ -13,6 +14,10 @@ from ratpiz.constants import (
 
 
 RUNNER_PATH = os.path.join(os.path.dirname(__file__), 'process_runner.py')
+
+logging.basicConfig()
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
 
 
 class CommandRunner(Thread):

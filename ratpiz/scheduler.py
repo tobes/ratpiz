@@ -74,6 +74,45 @@ def run_command(payload=None):
     t.start()
 
 
+def set_schedule(session, job_db, job):
+    """
+    see if this job needs to be scheduled to run.  if so the we add
+    ourself.
+    """
+    log.info('set schedule')
+
+    # are we already scheduled?
+    if job_db.scheduled(session):
+        log.info('no need to schedule')
+        return
+
+    # when are we next due to run?
+    base_date = job_db.last_run or job.start_date
+    schedule = croniter(job.schedule, base_date)
+    next_schedule = schedule.get_next()
+
+    # check if we missed a run
+    # if it is the first time we run, then is it that the start date met
+    # the run criteria?
+    if job_db.last_run is None:
+        prev_schedule = schedule.get_prev()
+        if prev_schedule >= timezone.to_unix_time(base_date):
+            next_schedule = prev_schedule
+
+    # get the date as utc
+    next_schedule_dt = timezone.datetime_from_timestamp(next_schedule)
+    log.info('schedule for %s', next_schedule_dt)
+    # add job to schedule so that we are run
+    job = db.JobRun.add_run(
+        session, next_schedule_dt, job_id=job_db.job_id
+    )
+    log.info('added %s', job.uuid)
+    db.Event.add_run(
+            session,
+            due_time=job.due_time,
+            event_type=TYPE_JOB,
+            uuid=job.uuid,
+    )
 if __name__ == '__main__':
 
     # for testing we register a job

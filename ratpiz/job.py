@@ -1,10 +1,12 @@
 import os.path
+import logging
 
 from croniter import croniter
 
 from ratpiz import db
-from ratpiz import timezone
 from ratpiz import exceptions
+from ratpiz import scheduler
+from ratpiz import timezone
 
 from ratpiz.context import Context
 
@@ -27,6 +29,12 @@ DEFAULT_KWARGS = {
 }
 
 
+logging.basicConfig()
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
+
+log.debug('Importing module...')
+
 class Task:
     """
     A task which is part of a job.
@@ -35,7 +43,7 @@ class Task:
     """
 
     def __init__(self, action=None, **kwargs):
-        # print(platform.python_version())
+        # log.info(platform.python_version())
         # check for valid action ie callable
         self._action = action
         self.name = kwargs.pop('name', action.__name__)
@@ -78,9 +86,10 @@ class Task:
         if context is None:
             context = Context(task_run=task_run, session=session)
 
-        print(
-            'task %s running for %s ...' %
-            (task_run.task_name, task_run.due_time)
+        log.info(
+            'task %s running for %s ...',
+            task_run.task_name,
+            task_run.due_time,
         )
 
         if task_run.state == STATE_PENDING:
@@ -105,13 +114,13 @@ class Task:
         # log the exception
         if exception:
             # TODO backtrace
-            print(str(exception))
+            log.error('Exception occurred', exc_info=True)
 
         # if retrying should we now fail?
         if state == STATE_RETRY:
             max_retries = self.from_kwargs('retries')
             if task_run.retries >= max_retries:
-                print('maximum number of retries')
+                log.info('maximum number of retries')
                 state = STATE_FAIL
 
         # What's going on? update the task run
@@ -128,8 +137,8 @@ class Task:
             event.set_state(session, STATE_WAITING)
 
         # logging is good
-        print('status %s' % self.status)
-        print('result %s' % result)
+        log.info('status %s', self.status)
+        log.info('result %s', result)
         return state
 
 
@@ -186,7 +195,7 @@ class Job:
         """
         show the current dependencies as best as we can
         """
-        print(self.dependencies)
+        log.info(self.dependencies)
 
     def register(self, session):
         """
@@ -219,7 +228,7 @@ class Job:
         needed.
         """
 
-        print('schedule_tasks')
+        log.info('schedule_tasks')
 
         # get the completed tasks
         completed_tasks = set()
@@ -227,26 +236,27 @@ class Job:
             completed_tasks.add(task_run.task_name)
         if completed_tasks == set(self.tasks.keys()):
             # all our tasks are done :)
-            print('all tasks complete')
+            log.info('all tasks complete')
             self.run_completed(session, job_run)
             return STATE_SUCCESS
-        print('completed_tasks %s' % completed_tasks)
+        log.info('completed_tasks %s', completed_tasks)
 
         # get and check each task for the job
         for task_name, dependencies in self.dependencies.items():
             if task_name in completed_tasks:
-                print('task %s completed' % task_name)
+                log.info('task %s completed', task_name)
                 continue
-            print('TASK: %s %s' % (task_name, dependencies))
+            log.info('TASK: %s %s', task_name, dependencies)
             if dependencies - completed_tasks:
-                print(
-                    'task %s awaiting dependencies %s' %
-                    (task_name, dependencies)
+                log.info(
+                    'task %s awaiting dependencies %s',
+                    task_name,
+                    dependencies,
                 )
                 continue
 
             # add task
-            print('adding task %s' % task_name)
+            log.info('adding task %s', task_name)
             task = task_run = db.TaskRun.add_run(
                     session,
                     job_run.due_time,
@@ -254,7 +264,7 @@ class Job:
                     task_name=task_name,
                     job_id=job_run.job_id,
             )
-            print('added %s' % task.uuid)
+            log.info('added %s', task.uuid)
             db.Event.add_run(
                     session,
                     due_time=task.due_time,
@@ -308,7 +318,7 @@ class Job:
         Check which tasks if any need to be scheduled and do any bookkeeping
         related to the job.
         """
-        print('job running for %s ...' % job_run.due_time)
+        log.info('job running for %s ...', job_run.due_time)
         job_run.set_state(session, STATE_RUNNING)
         state = self.schedule_tasks(session, job_run)
         return state

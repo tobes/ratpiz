@@ -12,13 +12,11 @@ class Context:
         self._session = session
         self._context_dict = None
 
-        job_run = task_run.get_job_run(session)
-        self._job_run = job_run
+        self._job_run = task_run.get_job_run(session)
 
         self._context_dict = {
-            'due_time': job_run.due_time,
+            'due_time': self._job_run.due_time,
             'attempt': task_run.retries + 1,
-
         }
 
     def __getitem__(self, key):
